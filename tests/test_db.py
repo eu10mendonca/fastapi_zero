@@ -63,7 +63,6 @@ def test_create_user(session, mock_db_time):
 
 
 def test_update_user(session, mock_db_time):
-
     new_user = User(username="testuser", password="testpass", email="test@example.com")
     session.add(new_user)
     session.commit()

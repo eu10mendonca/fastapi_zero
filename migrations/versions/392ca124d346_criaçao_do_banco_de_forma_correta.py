@@ -1,8 +1,8 @@
-"""create users table
+"""Criaçao do banco de forma correta
 
-Revision ID: fbd5bb4da12b
+Revision ID: 392ca124d346
 Revises: 
-Create Date: 2026-02-18 00:35:48.035896
+Create Date: 2026-02-19 21:59:44.727350
 
 """
 from typing import Sequence, Union
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = 'fbd5bb4da12b'
+revision: str = '392ca124d346'
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -27,9 +27,12 @@ def upgrade() -> None:
     sa.Column('password', sa.String(length=255), nullable=False),
     sa.Column('email', sa.String(length=255), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('email'),
-    sa.UniqueConstraint('username')
+    sa.UniqueConstraint('email', name='uq_users_email'),
+    sa.UniqueConstraint('username'),
+    sa.UniqueConstraint('username', name='uq_users_username')
     )
     # ### end Alembic commands ###
 
