@@ -1,10 +1,12 @@
 from http import HTTPStatus
 
+import pytest
 from jwt import encode
 
 
-def test_login_for_access_token(client, user):
-    response = client.post(
+@pytest.mark.asyncio
+async def test_get_token(client, user):
+    response = await client.post(
         "/auth/token", data={"username": user.email, "password": user.clean_password}
     )
 
@@ -15,8 +17,9 @@ def test_login_for_access_token(client, user):
     assert "access_token" in token
 
 
-def test_jwt_invalid_token(client):
-    response = client.delete(
+@pytest.mark.asyncio
+async def test_jwt_invalid_token(client):
+    response = await client.delete(
         "/users/1", headers={"Authorization": "Bearer token-invalido"}
     )
 
@@ -24,15 +27,17 @@ def test_jwt_invalid_token(client):
     assert response.json() == {"detail": "Could not validate credentials"}
 
 
-def test_get_current_user_without_sub(client, settings):
+@pytest.mark.asyncio
+async def test_get_current_user_without_sub(client, settings):
     token = encode({}, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
-    response = client.get("/users/", headers={"Authorization": f"Bearer {token}"})
+    response = await client.get("/users/", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == HTTPStatus.UNAUTHORIZED
 
 
-def test_get_current_user_email_non_existent(client, settings):
+@pytest.mark.asyncio
+async def test_get_current_user_email_non_existent(client, settings):
     token = encode(
         {"sub": "abcd@1234.com"}, settings.SECRET_KEY, algorithm=settings.ALGORITHM
     )
-    response = client.get("/users/", headers={"Authorization": f"Bearer {token}"})
+    response = await client.get("/users/", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == HTTPStatus.UNAUTHORIZED

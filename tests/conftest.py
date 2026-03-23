@@ -2,9 +2,10 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from fastapi_zero.app import app
 from fastapi_zero.base import Base
@@ -18,30 +19,38 @@ from fastapi_zero.settings import Settings
 #     return TestClient(app)
 
 
-@pytest.fixture
-def client(session):
-    def get_session_override():
-        return session
+@pytest_asyncio.fixture
+async def client(session):
+    async def get_session_override():
+        yield session
 
-    with TestClient(app) as client:
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="htpp://test") as client:
         app.dependency_overrides[get_session] = get_session_override
         yield client
-
     app.dependency_overrides.clear()
 
 
-@pytest.fixture
-def session():
-    engine = create_engine(
-        "postgresql+psycopg://postgres:postgres@localhost:5432/fastapi_zero_test",
+@pytest_asyncio.fixture
+async def session():
+    engine = create_async_engine(
+        "postgresql+asyncpg://postgres:postgres@localhost:5432/fastapi_zero_test",
         echo=True,
     )
-    Base.metadata.create_all(engine)
+    # Base.metadata.create_all(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-    with Session(engine) as session:
+    async with AsyncSession(engine, expire_on_commit=False) as session:
         yield session
 
-    Base.metadata.drop_all(engine)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+
+    # with Session(engine) as session:
+    #     yield session
+
+    # Base.metadata.drop_all(engine)
 
 
 @contextmanager
@@ -66,8 +75,8 @@ def mock_db_time():
     return _mock_db_time
 
 
-@pytest.fixture
-def user(session):
+@pytest_asyncio.fixture
+async def user(session):
     password = "secret"
     user = User(
         username="johndoe",
@@ -75,8 +84,8 @@ def user(session):
         password=get_password_hash(password),
     )
     session.add(user)
-    session.commit()
-    session.refresh(user)
+    await session.commit()
+    await session.refresh(user)
 
     # Adicionado em tempo de execução apenas para poder validar a criptografia da senha.
     user.clean_password = password  # type: ignore
@@ -84,9 +93,9 @@ def user(session):
     return user
 
 
-@pytest.fixture
-def token(client, user):
-    response = client.post(
+@pytest_asyncio.fixture
+async def token(client, user):
+    response = await client.post(
         "/auth/token", data={"username": user.email, "password": user.clean_password}
     )
     return response.json()["access_token"]

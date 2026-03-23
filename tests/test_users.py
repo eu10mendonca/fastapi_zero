@@ -1,10 +1,13 @@
 from http import HTTPStatus
 
+import pytest
+
 from fastapi_zero.schemas import UserPublic
 
 
-def test_create_user(client):
-    response = client.post(
+@pytest.mark.asyncio
+async def test_create_user(client):
+    response = await client.post(
         "/users/",
         json={
             "username": "johndoe",
@@ -23,8 +26,9 @@ def test_create_user(client):
     }
 
 
-def test_post_integrity_username_error(client, user):
-    response = client.post(
+@pytest.mark.asyncio
+async def test_post_integrity_username_error(client, user):
+    response = await client.post(
         "/users/",
         json={
             "username": "johndoe",
@@ -37,8 +41,9 @@ def test_post_integrity_username_error(client, user):
     assert response.json().get("detail") == "Username já cadastrado"
 
 
-def test_post_integrity_email_error(client, user):
-    response = client.post(
+@pytest.mark.asyncio
+async def test_post_integrity_email_error(client, user):
+    response = await client.post(
         "/users/",
         json={
             "username": "casa",
@@ -51,31 +56,36 @@ def test_post_integrity_email_error(client, user):
     assert response.json().get("detail") == "Email já cadastrado"
 
 
-def test_read_users(client, user, token):
+@pytest.mark.asyncio
+async def test_read_users(client, user, token):
     user_schema = UserPublic.model_validate(user).model_dump(
         mode="json"
     )  # foi preciso passar o mode=json para que
     # o python converta o formato do python para json
-    response = client.get("/users/", headers={"Authorization": f"Bearer {token}"})
+    response = await client.get("/users/", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {"users": [user_schema]}
 
 
-def test_read_user_by_inexistent_id(client, token):
-
-    response = client.get("users/999", headers={"Authorization": f"Bearer {token}"})
+@pytest.mark.asyncio
+async def test_read_user_by_inexistent_id(client, token):
+    response = await client.get(
+        "users/999", headers={"Authorization": f"Bearer {token}"}
+    )
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
-def test_read_user_by_id_with_user(client, user, token):
-    response = client.get("users/1", headers={"Authorization": f"Bearer {token}"})
+@pytest.mark.asyncio
+async def test_read_user_by_id_with_user(client, user, token):
+    response = await client.get("users/1", headers={"Authorization": f"Bearer {token}"})
 
     assert response.status_code == HTTPStatus.OK
     assert response.json().get("id") == 1
 
 
-def test_update_user_ok(client, user, token):
-    response = client.put(
+@pytest.mark.asyncio
+async def test_update_user_ok(client, user, token):
+    response = await client.put(
         "/users/1",
         json={
             "username": "john_doe_updated",
@@ -94,8 +104,9 @@ def test_update_user_ok(client, user, token):
     }
 
 
-def test_update_user_forbidden(client, token):
-    response = client.put(
+@pytest.mark.asyncio
+async def test_update_user_forbidden(client, token):
+    response = await client.put(
         "/users/999",
         json={
             "username": "non_existent_user",
@@ -107,8 +118,9 @@ def test_update_user_forbidden(client, token):
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 
-def test_update_integrity_username_error(client, user, token):
-    client.post(
+@pytest.mark.asyncio
+async def test_update_integrity_username_error(client, user, token):
+    await client.post(
         "/users/",
         json={
             "username": "test_update_integrity",
@@ -117,7 +129,7 @@ def test_update_integrity_username_error(client, user, token):
         },
     )
 
-    response = client.put(
+    response = await client.put(
         "/users/1",
         json={
             "username": "test_update_integrity",
@@ -130,8 +142,9 @@ def test_update_integrity_username_error(client, user, token):
     assert response.status_code == HTTPStatus.CONFLICT
 
 
-def test_update_integrity_email_error(client, user, token):
-    client.post(
+@pytest.mark.asyncio
+async def test_update_integrity_email_error(client, user, token):
+    await client.post(
         "/users/",
         json={
             "username": "test_update",
@@ -140,7 +153,7 @@ def test_update_integrity_email_error(client, user, token):
         },
     )
 
-    response = client.put(
+    response = await client.put(
         "/users/1",
         json={
             "username": "test_update_integrity",
@@ -153,8 +166,11 @@ def test_update_integrity_email_error(client, user, token):
     assert response.status_code == HTTPStatus.CONFLICT
 
 
-def test_delete_user(client, user, token):
-    response = client.delete("/users/1", headers={"Authorization": f"Bearer {token}"})
+@pytest.mark.asyncio
+async def test_delete_user(client, user, token):
+    response = await client.delete(
+        "/users/1", headers={"Authorization": f"Bearer {token}"}
+    )
 
     assert response.status_code == HTTPStatus.OK
     assert response.json() == {"message": "User deleted"}
