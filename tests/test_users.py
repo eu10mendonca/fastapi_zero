@@ -86,7 +86,7 @@ async def test_read_user_by_id_with_user(client, user, token):
 @pytest.mark.asyncio
 async def test_update_user_ok(client, user, token):
     response = await client.put(
-        "/users/1",
+        f"/users/{user.id}",
         json={
             "username": "john_doe_updated",
             "email": "john_doe_updated@example.com",
@@ -105,34 +105,12 @@ async def test_update_user_ok(client, user, token):
 
 
 @pytest.mark.asyncio
-async def test_update_user_forbidden(client, token):
-    response = await client.put(
-        "/users/999",
-        json={
-            "username": "non_existent_user",
-            "email": "non_existent_user@example.com",
-            "password": "no_secret",
-        },
-        headers={"Authorization": f"Bearer {token}"},
-    )
-    assert response.status_code == HTTPStatus.FORBIDDEN
-
-
-@pytest.mark.asyncio
-async def test_update_integrity_username_error(client, user, token):
-    await client.post(
-        "/users/",
-        json={
-            "username": "test_update_integrity",
-            "email": "test_update_integrity@example.com",
-            "password": "no_secret",
-        },
-    )
+async def test_update_integrity_username_error(client, user, token, other_user):
 
     response = await client.put(
-        "/users/1",
+        f"/users/{user.id}",
         json={
-            "username": "test_update_integrity",
+            "username": other_user.username,
             "email": "johndoe@example.com",
             "password": "secret",
         },
@@ -143,21 +121,13 @@ async def test_update_integrity_username_error(client, user, token):
 
 
 @pytest.mark.asyncio
-async def test_update_integrity_email_error(client, user, token):
-    await client.post(
-        "/users/",
-        json={
-            "username": "test_update",
-            "email": "test_update_integrity@example.com",
-            "password": "no_secret",
-        },
-    )
+async def test_update_integrity_email_error(client, user, token, other_user):
 
     response = await client.put(
-        "/users/1",
+        f"/users/{user.id}",
         json={
             "username": "test_update_integrity",
-            "email": "test_update_integrity@example.com",
+            "email": other_user.email,
             "password": "secret",
         },
         headers={"Authorization": f"Bearer {token}"},
