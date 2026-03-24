@@ -31,7 +31,7 @@ async def test_post_integrity_username_error(client, user):
     response = await client.post(
         "/users/",
         json={
-            "username": "johndoe",
+            "username": user.username,
             "email": "casa@example.com",
             "password": "secret",
         },
@@ -47,7 +47,7 @@ async def test_post_integrity_email_error(client, user):
         "/users/",
         json={
             "username": "casa",
-            "email": "johndoe@example.com",
+            "email": user.email,
             "password": "secret",
         },
     )
@@ -164,6 +164,31 @@ async def test_update_integrity_email_error(client, user, token):
     )
     assert response.json().get("detail") == "Email já cadastrado"
     assert response.status_code == HTTPStatus.CONFLICT
+
+
+@pytest.mark.asyncio
+async def test_update_user_with_wrong_user(client, other_user, token):
+    response = await client.put(
+        f"/users/{other_user.id}",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "username": "bob",
+            "email": "bob@example.com",
+            "password": "mynewpassword",
+        },
+    )
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {"detail": "Not enough permissions"}
+
+
+@pytest.mark.asyncio
+async def test_delete_user_wrong_user(client, other_user, token):
+    response = await client.delete(
+        f"/users/{other_user.id}", headers={"Authorization": f"Bearer {token}"}
+    )
+
+    assert response.status_code == HTTPStatus.FORBIDDEN
+    assert response.json() == {"detail": "Not enough permissions"}
 
 
 @pytest.mark.asyncio

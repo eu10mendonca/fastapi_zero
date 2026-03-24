@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from datetime import datetime, timezone
 
+import factory
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -17,6 +18,15 @@ from fastapi_zero.settings import Settings
 # @pytest.fixture
 # def client():
 #     return TestClient(app)
+
+
+class UserFactory(factory.Factory):  # type: ignore
+    class Meta:  # type: ignore
+        model = User
+
+    username = factory.Sequence(lambda n: f"test{n}")  # type: ignore
+    email = factory.LazyAttribute(lambda obj: f"{obj.username}@test.com")  # type: ignore
+    password = factory.LazyAttribute(lambda obj: f"{obj.username}@example.com")  # type: ignore
 
 
 @pytest_asyncio.fixture
@@ -78,11 +88,31 @@ def mock_db_time():
 @pytest_asyncio.fixture
 async def user(session):
     password = "secret"
-    user = User(
-        username="johndoe",
-        email="johndoe@example.com",
-        password=get_password_hash(password),
-    )
+    user = UserFactory(password=get_password_hash(password))
+    # user = User(
+    #     username="johndoe",
+    #     email="johndoe@example.com",
+    #     password=get_password_hash(password),
+    # )
+    session.add(user)
+    await session.commit()
+    await session.refresh(user)
+
+    # Adicionado em tempo de execução apenas para poder validar a criptografia da senha.
+    user.clean_password = password  # type: ignore
+
+    return user
+
+
+@pytest_asyncio.fixture
+async def other_user(session):
+    password = "secret"
+    user = UserFactory(password=get_password_hash(password))
+    # user = User(
+    #     username="johndoe",
+    #     email="johndoe@example.com",
+    #     password=get_password_hash(password),
+    # )
     session.add(user)
     await session.commit()
     await session.refresh(user)
